@@ -21,12 +21,13 @@ package object featureengineeringfuncs{
             createRandomString(5) :: acc
         }).toSeq  
     }
+}
 
-
+package object stringdistances{
     private def prepareDataForHammingDistance(spark:SparkSession):(DataFrame, DataFrame)={
 
         import spark.implicits._
-        val data = createRandomStrings(10)
+        val data = featureengineeringfuncs.createRandomStrings(10)
 
         val df1 = spark.sparkContext.parallelize(data).toDF("name")
         val df2 = df1.withColumn("name1", col("name")).drop("name")
@@ -60,5 +61,5 @@ object FeatureEngineering extends App{
     import spark.implicits._
     spark.sparkContext.addSparkListener(new JobStageTaskMetricsCollector())
 
-    featureengineeringfuncs.hammingDistancePipeline(spark)
+    stringdistances.hammingDistancePipeline(spark)
 }
