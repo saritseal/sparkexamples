@@ -1,0 +1,12 @@
+*.parquet
+*.json
+target
+output
+project
+logs
+.idea
+.bsp
+.bloop
+.metals
+.vscode
+*.log
