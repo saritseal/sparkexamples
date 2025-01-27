@@ -14,6 +14,7 @@ lazy val root = (project in file("."))
       // Apache Spark Core and SQL
       "org.apache.spark" %% "spark-core" % "3.4.1" % "provided",
       "org.apache.spark" %% "spark-sql"  % "3.4.1" % "provided",
+      "org.apache.spark" %% "spark-mllib" % "3.5.0",
 
       // Joda-Time for date/time handling
       "joda-time" % "joda-time" % "2.10.14",
@@ -23,7 +24,12 @@ lazy val root = (project in file("."))
       "org.slf4j" % "slf4j-log4j12" % "1.7.36",
 
       // Apache commons Math 
-      "org.apache.commons" % "commons-math3" % "3.6.1"
+      "org.apache.commons" % "commons-math3" % "3.6.1",
+
+      // for numerical processing 
+      // "org.scalanlp" %% "breeze" % "1.3"
+      "org.scalanlp" %% "breeze" % "2.1.0",
+      "org.scalanlp" %% "breeze-natives" % "2.1.0",
     ),
 
     // Enable better logging
