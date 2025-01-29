@@ -63,14 +63,14 @@ package object commonfunctions {
         
         // This expressions unpacks al the columns
         val stats = df.agg(types.head, types.tail: _*)
-
-        stats.show()
+        //stats.show()
 
         logger.info(s"number of columns = ${stats.columns.length}")
 
         val exprString = generateExpr(df.schema.fields.filter(x => x.dataType.typeName == "double" || x.dataType.typeName == "long" ).map(_.name), Seq("sum", "avg", "min", "max", "count", "stddev", "q1", "q3"))
 
         // The stackedDF has all columns with datatype as string if needed in other type you have to convert the datatype
+        // stack(numberof columnns, 'column_name', column_name, ......) as (row_label, value)
         val stackedDF = stats.selectExpr(exprString)
 
         var finalDF = stackedDF.withColumn(
@@ -91,8 +91,8 @@ package object commonfunctions {
                     .when(col("value").rlike("^[0-9]+\\.[0-9]+$"), lit("Double"))
                     .when(col("value").isin("true", "false"), lit("Boolean"))
                     .otherwise(lit("String")))
-        // stack(numberof columnns, 'column_name', column_name, ......) as (row_label, value)
 
+        
         finalDF.show(stats.columns.length, false)
     }
 }
