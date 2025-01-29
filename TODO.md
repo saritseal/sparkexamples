@@ -9,7 +9,7 @@ TODO :
     b.  $bins = 2 * \sqrt[3]{n}$ : **Rice Rule**
     c.  $bin width = (2 * IQR) \div{\sqrt[3]{n}}$
             bins = $(max(data) - min(data)) \div {((2 * IQR) \div{\sqrt[3]{n}})} $
-            $ IQR = Q3 -Q1 $
+            $ IQR = Q3 - Q1 $
             $ Q1 = percentile(data, 25) $
             $ Q3 = percentile(data, 75) $
             $ Lower bound = Q1 - 1.5 * IQR $
