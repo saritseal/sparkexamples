@@ -39,13 +39,38 @@ package object commonfunctions {
         return types
     }
 
+    private def findAllNumericColumns(df:DataFrame):Seq[Column]={
+        val types = df.schema.fields.filter(x =>x.dataType.typeName == "integer" || x.dataType.typeName == "double" || x.dataType.typeName == "long" ).flatMap( x => {
+            Seq( 
+                round(sum(x.name),2).cast("string").alias(s"${x.name}_sum"), 
+                round(avg(x.name), 2).cast("string").alias(s"${x.name}_avg"),
+                round(count(x.name), 2).cast("string").alias(s"${x.name}_count"),
+                round(min(x.name), 2).cast("string").alias(s"${x.name}_min"),
+                round(max(x.name), 2).cast("string").alias(s"${x.name}_max"),
+                round(stddev(x.name), 2).cast("string").alias(s"${x.name}_stddev"),
+                round(percentile_approx(col(x.name), lit(0.25), lit(1000)), 2).cast("string").alias(s"${x.name}_q1"),
+                round(percentile_approx(col(x.name), lit(0.75), lit(1000)), 2).cast("string").alias(s"${x.name}_q3"),
+                round(sum(when(isnull(col(x.name)), 1).otherwise(0)) , 2).cast("string").alias(s"${x.name}_nulls")
+            )})
+        return types
+    }
     private def readFile(filePath:String)(spark:SparkSession):Either[Exception, DataFrame]={
-        val df = filePath match{
+        var df = (filePath match{
             case x if x.endsWith("parquet") => Right(spark.read.parquet(filePath))
-            case x if x.endsWith("csv") => Right(spark.read.csv(filePath))
+            case x if x.endsWith("csv") => Right(spark.read.option("header", true).csv(filePath))
             case x => Left(new Exception("the file is not of known file types"))
-        }
-        return df
+        }) match {
+                    case Left(x) =>  {
+                        return Left(x)
+                    } 
+                    case Right(x) => x
+                }
+        
+        val columns = df.columns.map(x => (x, x.replaceAll(" ", "_").replaceAll("/", "_").replaceAll("(", "").replaceAll(")", ""))).toMap
+        logger.info(s"columns ${columns.mkString(", ")}, ${df.getClass().getName()}")
+        df = df.withColumnsRenamed(columns)
+
+        return Right(df)
 
     }
 
@@ -59,10 +84,14 @@ package object commonfunctions {
             case Right(x) => x
         }
 
+        df.show()
+
         val types = findNumercColumns(df)
         
+
         // This expressions unpacks al the columns
         val stats = df.agg(types.head, types.tail: _*)
+
         //stats.show()
 
         logger.info(s"number of columns = ${stats.columns.length}")
