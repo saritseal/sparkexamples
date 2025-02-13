@@ -5,6 +5,7 @@ import learn.job.processblocks
 import org.slf4j.{LoggerFactory, Logger}
 import scala.reflect.runtime.universe._
 
+
 object ProcessBlocks extends App{
     val logger = LoggerFactory.getLogger(getClass())
     val spark = processblocks.getSparkSession
@@ -27,62 +28,34 @@ object ProcessBlocks extends App{
             "cmpBm","cmpBy","cmpPlz").map(x => func(col(x)).alias(s"${funcName}_${x}"))
     }
 
+    def constructStackExpr(statFunctions:Seq[String]):String={
+        val columns =  Seq("idFirst", "idSecond", "cmpFnameC1", "cmpFnameC2", 
+            "cmpLnameC1", "cmpLnameC2", "cmpSex", "cmpBd", 
+            "cmpBm","cmpBy","cmpPlz")
+
+        val stackExpr = columns.foldLeft(List[String]())((agg, x) => {
+                agg ++ statFunctions.foldLeft(List[String]())( (a, y) =>  {
+                    a :+ s"'${y}_${x}', ${y}_${x}"
+                 }) 
+            }).mkString(",")
+        
+        return f" stack(${columns.length * statFunctions.length}, ${stackExpr}) as (method, value) "
+    }
+
 
     val columns = (getColumns(max, "max") ++ getColumns(avg,  "avg") ++ getColumns(min, "min") ++ getColumns(stddev, "stddev")) //
     // logger.info(columns)
     val statistics = df.select(columns : _*)
     statistics.show()
+    statistics.printSchema()
 
-    // val statistics = df.select( max(col("idFirst")).alias("max_idFirst"), 
-    //                             max(col("idSecond")).alias("max_idSecond"), 
-    //                             max(col("cmpFnameC1")).alias("max_cmpFnameC1"), 
-    //                             max(col("cmpFnameC2")).alias("max_cmpFnameC2"), 
-    //                             max(col("cmpLnameC1")).alias("max_cmpLnameC1"), 
-    //                             max(col("cmpLnameC2")).alias("max_cmpLnameC2"), 
-    //                             max(col("cmpSex")).alias("max_cmpSex"), 
-    //                             max(col("cmpBd")).alias("max_cmpBd"), 
-    //                             max(col("cmpBm")).alias("max_cmpBm"), 
-    //                             max(col("cmpBy")).alias("max_cmpBy"), 
-    //                             max(col("cmpPlz")).alias("max_cmpPlz"), 
-    //                             avg(col("idFirst")).alias("avg_idFirst"), 
-    //                             avg(col("idSecond")).alias("avg_idSecond"), 
-    //                             avg(col("cmpFnameC1")).alias("avg_cmpFnameC1"), 
-    //                             avg(col("cmpFnameC2")).alias("avg_cmpFnameC2"), 
-    //                             avg(col("cmpLnameC1")).alias("avg_cmpLnameC1"), 
-    //                             avg(col("cmpLnameC2")).alias("avg_cmpLnameC2"), 
-    //                             avg(col("cmpSex")).alias("avg_cmpSex"), 
-    //                             avg(col("cmpBd")).alias("avg_cmpBd"), 
-    //                             avg(col("cmpBm")).alias("avg_cmpBm"), 
-    //                             avg(col("cmpBy")).alias("avg_cmpBy"), 
-    //                             avg(col("cmpPlz")).alias("avg_cmpPlz"), 
-    //                             min(col("idFirst")).alias("min_idFirst"), 
-    //                             min(col("idSecond")).alias("min_idSecond"), 
-    //                             min(col("cmpFnameC1")).alias("min_cmpFnameC1"), 
-    //                             min(col("cmpFnameC2")).alias("min_cmpFnameC2"), 
-    //                             min(col("cmpLnameC1")).alias("min_cmpLnameC1"), 
-    //                             min(col("cmpLnameC2")).alias("min_cmpLnameC2"), 
-    //                             min(col("cmpSex")).alias("min_cmpSex"), 
-    //                             min(col("cmpBd")).alias("min_cmpBd"), 
-    //                             min(col("cmpBm")).alias("min_cmpBm"), 
-    //                             min(col("cmpBy")).alias("min_cmpBy"), 
-    //                             min(col("cmpPlz")).alias("min_cmpPlz"), 
-    //                             stddev(col("idFirst")).alias("stddev_idFirst"), 
-    //                             stddev(col("idSecond")).alias("stddev_idSecond"), 
-    //                             stddev(col("cmpFnameC1")).alias("stddev_cmpFnameC1"), 
-    //                             stddev(col("cmpFnameC2")).alias("stddev_cmpFnameC2"), 
-    //                             stddev(col("cmpLnameC1")).alias("stddev_cmpLnameC1"), 
-    //                             stddev(col("cmpLnameC2")).alias("stddev_cmpLnameC2"), 
-    //                             stddev(col("cmpSex")).alias("stddev_cmpSex"), 
-    //                             stddev(col("cmpBd")).alias("stddev_cmpBd"), 
-    //                             stddev(col("cmpBm")).alias("stddev_cmpBm"), 
-    //                             stddev(col("cmpBy")).alias("stddev_cmpBy"), 
-    //                             stddev(col("cmpPlz")).alias("stddev_cmpPlz")).show()
+    val stackExpr = constructStackExpr(Seq("max", "min", "avg", "stddev"))
 
-    // counts.join(duplicates, joinExprs=lit(true), joinType="full_outer" ).na.fill(Map("idFirst" -> "None", "idSecond" -> "None", "duplicate_counts" -> 0 )).show()
+    // Remember to cast the columns to a single type    
+    val castedColumns = statistics.columns.foldLeft(List[org.apache.spark.sql.Column]())((agg, x)=>{
+        col(x).cast("double").alias(s"""${x}"""):: agg
+    })
 
-
-    // idFirst, idSecond, cmpFnameC1, cmpFnameC2, 
-    // cmpLnameC1, cmpLnameC2, cmpSex, cmpBd, 
-    // cmpBm,cmpBy,cmpPlz
+    statistics.select(castedColumns: _*).selectExpr(stackExpr).show()
 
 }
